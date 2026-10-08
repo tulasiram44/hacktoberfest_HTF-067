@@ -8,12 +8,12 @@
 **Team Name:** DARK PROTOCOL
 
 
-| Member | Contribution   |
-| ------ | -------------- |
-| Nithin | [Contribution] |
-| Pavna Preethikha M | [Contribution] |
-| Nehasri Mullapudi | [Contribution] |
-| Sattineni V S Tulasi Ram | [Contribution] |
+| Member | 
+| ------ | 
+| Nithin |  
+| Pavna Preethikha M |
+| Nehasri Mullapudi |
+| Sattineni V S Tulasi Ram | 
 
 
 ## Problem Statement
