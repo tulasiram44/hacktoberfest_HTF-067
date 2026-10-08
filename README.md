@@ -114,10 +114,10 @@ The submitted application should be functional and accessible through the provid
 
 ### AI / Models
 
-Gemma 4 – Natural-language understanding and service-request processing
-Antigravity – AI-assisted development and implementation
-AI Matching Engine – Intelligent worker–customer matching
-Geo Mapping / Location Services – Location-based worker matching and proximity analysis
+Gemma 4 – Natural-language understanding and service-request processing.
+Antigravity – AI-assisted development and implementation.
+AI Matching Engine – Intelligent worker–customer matching.
+Geo Mapping / Location Services – Location-based worker matching and proximity analysis.
 
 
 ### Usage
