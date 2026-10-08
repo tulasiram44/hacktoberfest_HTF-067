@@ -83,20 +83,7 @@ flowchart TD
 - **Database:** [Add your actual database]
 - **Location Services:** Geo-location / Maps
 
-### Technology Stack
 
-
-| Category        | Technologies                |
-| --------------- | --------------------------- |
-| Frontend        | [Technologies / N/A]        |
-| Backend         | [Technologies / N/A]        |
-| Database        | [Technologies / N/A]        |
-| AI / ML         | [Models / frameworks / N/A] |
-| Infrastructure  | [Technologies / N/A]        |
-| APIs / Services | [Services / N/A]            |
-
-
-If a category or technology is not implemented in the project, specify `N/A` instead of leaving the field blank.
 
 ### How It Works
 
