@@ -103,9 +103,7 @@ Gemma 4 was selected for natural-language understanding because it allows the ap
 The AI layer is separated from the matching logic. Gemma converts an unstructured customer request into structured information, while the application logic uses factors such as location, skills, availability, and verification to determine suitable workers.
 This separation makes the system easier to test, maintain, and extend.
 
-## Implementation During the Hackathon
 
-[Describe what the team built during the Hack Day and the major functionality or components completed during the event.]
 
 ### Team Contributions
 
@@ -114,13 +112,7 @@ This separation makes the system easier to test, maintain, and extend.
 - **Nehasri Mullapudi:**Frontend development
 - **Sattineni V S Tulasi Ram:** Gemma 4 integration & System architecture
 
-## Working Application
 
-**Live Application:** [Live URL]
-
-[Briefly explain how the deployed application can be accessed and what functionality can be tested.]
-
-The submitted application should be functional and accessible through the provided link where applicable.
 
 ## Demo Video
 
@@ -152,7 +144,7 @@ Select a suitable worker and proceed with the booking.
 
 ## Devpost Submission
 
-**Devpost Project:** [Devpost Project URL]
+**Devpost Project:** [[Devpost Project URL]](https://dev.to/venkata_satyatulasiram/sahaya-187)
 
 
 
