@@ -78,9 +78,9 @@ flowchart TD
 
 - **AI Model:** Gemma 4
 - **AI Matching:** Worker-customer matching based on skills, location, availability, and verification
-- **Backend:** [Add your actual backend technology]
-- **Frontend:** [Add your actual frontend technology]
-- **Database:** [Add your actual database]
+- **Backend:** python
+- **Frontend:** python
+- **Database:** CSV,PANDA,NumPy,Scikit-learn ,PostgreSQL + PostGIS
 - **Location Services:** Geo-location / Maps
 
 
@@ -114,19 +114,7 @@ This separation makes the system easier to test, maintain, and extend.
 - **Nehasri Mullapudi:**Frontend development
 - **Sattineni V S Tulasi Ram:** Gemma 4 integration & System architecture
 
-## Working Application
 
-**Live Application:** [Live URL]
-
-[Briefly explain how the deployed application can be accessed and what functionality can be tested.]
-
-The submitted application should be functional and accessible through the provided link where applicable.
-
-## Demo Video
-
-**Demo Video:** [Video URL]
-
-[Provide a short demonstration of the working project, covering the main user flow and important functionality.]
 
 ## Open Source and AI Usage
 
@@ -152,7 +140,7 @@ Select a suitable worker and proceed with the booking.
 
 ## Devpost Submission
 
-**Devpost Project:** [Devpost Project URL]
+**Devpost Project:** [[Devpost Project URL]](https://dev.to/venkata_satyatulasiram/sahaya-187)
 
 
 
