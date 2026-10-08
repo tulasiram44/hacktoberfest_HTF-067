@@ -1,0 +1,40 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgis/postgis:15-3.3
+    environment:
+      POSTGRES_USER: sahaya
+      POSTGRES_PASSWORD: sahaya_password
+      POSTGRES_DB: sahaya_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./database/schema:/docker-entrypoint-initdb.d/schema
+      - ./database/seed:/docker-entrypoint-initdb.d/seed
+
+  backend:
+    build: 
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      - DATABASE_URL=postgres://sahaya:sahaya_password@db:5432/sahaya_db
+      - JWT_SECRET=super_secret_sih_key_2026
+      - MOCK_MODE=true
+      - ML_SERVICE_URL=http://ml-service:8000
+    depends_on:
+      - db
+      - ml-service
+
+  ml-service:
+    build:
+      context: ./ml-service
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+
+volumes:
+  postgres_data:

@@ -1,0 +1,389 @@
+=== DOCX ===
+SAHAYA
+Technical Architecture — Complete Reference
+Team DARK PROTOCOL · SIH 2026
+Three-Floor Architecture
+Floor 3 (UI)  →  Floor 2 (Security)  →  Floor 1 (Backend)  →  Basement (Data)
+FLOOR 3 — The Apps (UI Layer)
+Floor 3 is the topmost layer — what users actually touch. It is purely a UI layer. No business logic, no data processing, no decision-making happens here. The apps collect what the user taps or types, send it to the backend via HTTPS, and display whatever comes back.
+The One Technology: Flutter
+What is Flutter?
+Flutter is Google's open-source framework for building mobile applications. You write one codebase in a language called Dart, and it compiles into both an Android app and an iOS app simultaneously.
+Most mobile frameworks build on top of the phone's native UI components — meaning they use Android's buttons on Android and iOS's buttons on iOS, which behave differently across platforms. Flutter is fundamentally different: it brings its own rendering engine called Skia. It draws every single pixel on the screen itself, like a game engine would. The phone's OS gives Flutter a blank canvas and Flutter paints everything on it.
+Why Flutter — Not the Alternatives?
+React Native is eliminated because it uses the phone's own UI components, which behave differently on Android vs iOS — causing inconsistencies. Writing separate Android (Kotlin) and iOS (Swift) apps doubles development effort. Flutter gives one codebase, consistent rendering, and strong multilingual support out of the box.
+What Flutter Handles in Sahaya
+1. UI Rendering
+Every screen, button, form, map view, and list drawn by the Skia engine. Identical on both platforms.
+2. Multilingual Support — Flutter i18n package
+Flutter ships with a built-in internationalisation (i18n) package. The app carries language packs — JSON files with every UI string in every supported language (Hindi, Tamil, Bengali, etc.). The phone's system language is detected automatically and the correct pack loads. No backend call needed. Zero latency for language switching.
+Dynamic content — worker names, addresses, cooperative names typed by users — is stored in Unicode in PostgreSQL and served exactly as entered. PostgreSQL supports Unicode natively, so no translation microservice is needed anywhere in the stack.
+For IVR: pre-recorded audio files in each language sit on the Asterisk server. The caller presses a number to select their language at the start of the call.
+3. Offline Support — sqflite (SQLite on device)
+Flutter uses the sqflite package to run a lightweight SQLite database directly on the phone — no server, no network. When the app has internet, it syncs data and stores it locally. When internet drops, the user can still see booking history, their profile, and upcoming jobs from the local cache.
+When a user takes an action without internet — updating availability, for example — Flutter queues that API call in SQLite and retries it automatically when connectivity returns. No data is lost. SQLite persists across app restarts and phone reboots, unlike in-memory storage.
+4. Real-Time Location — geolocator + web_socket_channel
+The Worker App uses the geolocator package to read GPS coordinates from the phone every 30 seconds. The web_socket_channel package opens a permanent WebSocket connection to the Node.js backend and sends those coordinates through it continuously — no new connection opened each time.
+The Consumer App uses the supabase_flutter package to subscribe to that worker's location row in PostgreSQL. Supabase Real-Time pushes every location update to the Consumer App instantly. The google_maps_flutter package renders the moving pin on the map.
+5. JWT Storage and HTTPS Requests
+After OTP login, Flutter stores the JWT in secure local storage on the device. Every subsequent HTTPS request to the backend automatically attaches the JWT in the Authorization header. The user stays logged in until the token expires.
+What Flutter Does NOT Handle
+No business logic. No matching algorithm. No AI. No payment processing. No database queries. Flutter collects inputs and displays results. All intelligence lives in Floor 1.
+This is what "thin client" means — the app is as thin as possible by design. Every decision is made by the backend.
+FLOOR 2 — The Security Door
+Floor 2 sits between the apps and the backend. Nothing from Floor 3 reaches Floor 1 without passing through here first. Floor 2 does not do any business logic — it only answers three questions on every single request:
+Is this token real and valid? → JWT Verification
+Is this role allowed here? → RBAC
+Is this person abusing the system? → Rate Limiting
+Component 1 — Supabase Auth
+What is Supabase?
+Supabase is an open-source backend-as-a-service platform — think of it as Firebase but open-source, built on PostgreSQL, and fully self-hostable. It provides authentication, a database, file storage, and real-time subscriptions in one platform. For Floor 2, only the Auth component is used.
+Why Supabase Auth — Not the Alternatives?
+The critical Supabase advantage is Row-Level Security (RLS). RLS lets you write rules directly in PostgreSQL — a worker can only ever query their own rows, even if the SQL query has no user filter. It's a database-level safety net on top of RBAC. Firebase has no equivalent because it doesn't use SQL.
+The Complete OTP Login Flow
+Step 1 — User enters phone number in the Flutter app.
+Step 2 — Flutter sends the phone number to Supabase Auth.
+Step 3 — Supabase Auth calls Twilio's SMS API. Twilio delivers a 6-digit OTP to the user's phone.
+Step 4 — User enters the OTP in the app. Flutter sends it to Supabase Auth for verification.
+Step 5 — Supabase Auth verifies the OTP. It creates the user record — userId, phone, role — and generates a JWT signed with its private key using the HS256 algorithm.
+Step 6 — JWT is returned to the Flutter app. Flutter stores it in secure local storage.
+Why OTP and Not Password?
+Gig workers in tier 2/3 cities may not have email IDs. Passwords get forgotten. Phone number is universal in India — everyone has one. OTP is frictionless and secure.
+Why Twilio for SMS?
+What is a JWT — Complete Explanation
+JWT stands for JSON Web Token. It is a string of text with three parts separated by dots: Header, Payload, and Signature.
+Header — Says what type of token this is and what algorithm locked it. For Sahaya: HS256.
+Payload — The actual data baked in: userId, role (consumer / worker / admin), and expiry timestamp.
+Signature — Supabase takes the Header and Payload, runs them through HS256 using its private key, and produces a unique hash. If anyone changes even one character in the payload — say, changes "worker" to "admin" — the signature no longer matches. The token is immediately rejected. Tamper-proof.
+Why JWT is fast: the backend verifies the signature by doing the math itself — no database call, no Supabase call on every request. One login, zero repeated auth lookups.
+Where Role is Assigned vs Where It is Verified
+Role is assigned once at registration — the user chooses Consumer or Worker. Supabase Auth stores it alongside the userId and phone. It is baked into every JWT issued for that user from that point on.
+Role is verified at Floor 2 on every single subsequent request. The API Gateway reads the JWT and checks the role against endpoint permissions. This happens every time, automatically.
+Where User Data is Stored — Two Places
+Supabase Auth stores bare identity: userId, phone, role. Just enough to log someone in and issue a token.
+PostgreSQL (the basement) stores the full profile: name, skills, location, rating, earnings, booking history. Everything the app actually needs to function.
+The userId is the thread connecting both — same ID in Supabase Auth and PostgreSQL. Supabase Auth answers "who is this?" PostgreSQL answers "what do we know about them?"
+Component 2 — API Gateway
+What is an API Gateway?
+A single entry point that sits in front of all Floor 1 microservices. Every request from every app comes here first. It checks the request, then routes it to the right service. On AWS/GCP, this is implemented using AWS API Gateway or Kong running in a container.
+The Three Checks — In Order
+Check 1 — JWT Verification
+The gateway reads the Authorization header: "Bearer eyJhbGci...". It runs the HS256 signature verification using Supabase's public key. If the signature is valid and the token is not expired — the request passes. If not — 401 Unauthorized. Stopped immediately.
+Check 2 — RBAC (Role-Based Access Control)
+Even with a valid JWT, the role must be allowed for that specific endpoint. A consumer JWT hitting a worker-only endpoint is blocked here — Floor 1 never sees the request. This enforces access control at the door, not inside the office.
+Check 3 — Rate Limiting
+Tracks requests per userId per minute. Exceeds the threshold — 429 Too Many Requests. Prevents OTP brute-forcing, booking spam, and AI engine abuse.
+After All Three Pass — Routing
+/api/booking/*  →  Booking & Scheduling Service (Floor 1)
+/api/geo/*  →  Geo-Matching Engine (Floor 1)
+/api/payments/*  →  Payments & Invoicing (Floor 1)
+/api/verify/*  →  Verification Service (Floor 1)
+/api/ai/*  →  AI Engine (Floor 1)
+/api/trust/*  →  Trust & Safety (Floor 1)
+/api/admin/*  →  Admin Dashboard backend (Floor 1)
+The IVR Exception
+The IVR is the only path in the entire system that bypasses Floor 2. It enters through a controlled unauthenticated internal path directly to the Booking Service. The IVR service itself authenticates the call via the phone network — Twilio and Asterisk handle that. No JWT involved.
+FLOOR 1 — The Core Backend
+Floor 1 is where all the intelligence lives. It is not one big program — it is nine independent microservices, each running in its own Docker container, each doing exactly one job. They share the basement database and communicate with each other via internal API calls when needed.
+Why Microservices — Not a Monolith?
+A monolith is one big program that does everything. If one part crashes, everything crashes. If bookings spike, you scale the entire application even if only the booking service is busy.
+Microservices are independent. If the AI Engine is under heavy load on a Monday morning, only that container scales. If the Payments Service crashes, bookings still work. Each service is isolated — failures are contained.
+Why Node.js AND Django — Not Just One?
+The split is intentional. Each framework is used for what it is genuinely best at.
+Node.js — Real-Time, High-Frequency, Reactive
+Node.js is event-driven and non-blocking. It does not wait for one request to finish before handling the next — it juggles many simultaneous connections efficiently. This makes it the right choice for anything that needs to be fast and reactive: bookings coming in, notifications going out, payments being triggered, geo-matching during peak hours.
+Node.js services: Geo-Matching Engine, Booking & Scheduling, Payments & Invoicing, Trust & Safety, Notification Engine.
+Django — Compute-Heavy, ML, Complex DB Logic
+Django is a Python framework. Python has the best ML libraries in the world — Prophet, LSTM, Scikit-learn. There is no Node.js equivalent. Django also handles the Verification Service and Federation Registry because those involve complex database logic and will eventually connect to external government cooperative databases — Python has the best libraries for external data integration.
+Django services: AI Engine, Verification Service, Federation Registry.
+The Nine Microservices
+1. Verification Service — Django
+What it does
+When a worker registers, this service makes a live lookup against the Federation Registry in PostgreSQL. It checks if the worker's name, cooperative ID, and district match actual federation records. If they match, the worker is marked verified:true and goes live on the platform. If not, registration is rejected.
+Why Django
+The lookup involves complex matching logic and will eventually connect to government cooperative databases. Python has the best libraries for external data integration. Django's ORM handles complex database queries cleanly.
+Tech
+Django REST API, PostgreSQL query, Federation Registry table. Synchronous — the worker waits for the result before their profile activates.
+Key point
+This is Floor 1, not Floor 2. Floor 2 verifies the JWT token. Floor 1 verifies the worker's identity as a cooperative member. Two completely different verifications.
+2. Geo-Matching Engine — Node.js + PostGIS
+What it does
+Takes a consumer's booking request — skill needed, location, minimum rating — and runs a single PostGIS spatial query against all verified, available workers. It filters by skill, availability, rating, and distance simultaneously and returns the single best match.
+How it works
+PostGIS ST_DWithin uses the R-Tree spatial index to instantly find all workers within a radius — without checking every worker in the database. ST_Distance then ranks them. One query, one result. This is orders of magnitude faster than pulling all workers and calculating distance in application code.
+Why Node.js
+Geo-matching needs to handle many simultaneous booking requests during peak hours. Node.js is non-blocking — it handles request 2 while still waiting for request 1's database response.
+Tech
+Node.js, PostGIS ST_DWithin and ST_Distance, PostgreSQL spatial index, Maps SDK (Google Maps or Mapbox) for visual rendering on the app.
+3. Booking & Scheduling — Node.js
+What it does
+Manages the complete lifecycle of every booking — creation, assignment, status tracking, and completion. On completion it automatically triggers the Payments Service and Trust & Safety for ratings.
+Two queue types
+Standard queue: processed in order, first come first served. Emergency queue: when a consumer marks a request as emergency, it broadcasts to ALL available workers in the zone simultaneously — first to accept gets the job. Speed matters more than optimal matching in an emergency.
+IVR temp allotment
+For IVR users — no app, no JWT — a booking is created with just the phone number as identifier. No userId. This is the controlled unauthenticated path from the IVR that bypasses Floor 2 and hits this service directly.
+Tech
+Node.js, PostgreSQL booking records, Notification Engine calls.
+4. AI Engine — Django + Python
+Three sub-functions
+Prophet — Demand Forecasting
+Prophet is Facebook's open-source time-series forecasting library. It is fed historical booking data by zone and skill. It learns patterns — time of day, day of week, festivals, post-monsoon season — and predicts future demand. Output: "Zone 4 will need 12 plumbers next Monday 8–10am." Why Prophet over a basic average? A basic average says 14 plumbers on Monday. Prophet says 14 normally, but 22 next Monday because it's post-Diwali and rain is forecast — historically plumbing spikes 57% in those conditions.
+LSTM — Worker Pre-Allocation
+LSTM (Long Short-Term Memory) is a type of neural network that learns patterns in sequential data. It studies each worker's history — which zones they accept jobs in, which times, which job types — and uses Prophet's forecast to pre-allocate workers to zones before demand hits. Workers get notified the night before. Proactive income, not reactive scrambling.
+Scikit-learn — Classification
+When a consumer types a vague request like "my sink is making noise," Scikit-learn's text classifier maps it to the correct skill category — Plumber — before it reaches the Geo-Matching Engine. This means consumers don't have to pick from a dropdown, which many rural users find confusing.
+Tech
+Django, Prophet, LSTM (PyTorch or Keras), Scikit-learn, PostgreSQL historical data.
+5. Payments & Invoicing — Node.js + Razorpay
+What it does
+Triggered automatically when a booking is marked complete. Charges the consumer via Razorpay, then splits the amount: worker's share via auto-payout to their UPI ID, a fixed levy to the Sahaya Shield welfare pool, and the remainder to the cooperative operational fund. Tax receipts are generated as PDFs and stored in Supabase Storage. Donations go through the same integration directly into the welfare pool.
+Why Razorpay — Not the Alternatives?
+Auto-payout via Razorpay's Route API is the key differentiator. The backend programmatically transfers earnings directly to a worker's UPI ID or bank account the moment a job is done. No monthly settlement, no manual intervention.
+Tech
+Node.js, Razorpay Route API, Supabase Storage for receipt PDFs, PostgreSQL payments ledger.
+6. Trust & Safety — Node.js
+Four sub-functions
+Ratings & Feedback
+After every completed booking, both consumer and worker rate each other. Ratings are stored in PostgreSQL and feed back into the Geo-Matching Engine's filter. Bad workers get matched less over time — a self-correcting quality loop.
+Report a Worker — with proof
+Consumer submits a report with optional photo or video proof. The media file goes to Supabase Storage (S3-compatible). The Trust & Safety service stores only the returned URL in PostgreSQL, linked to the report record. Admin reviews via the dashboard.
+SOS Safety Helpline
+Emergency button in both apps. Immediately logs the event with timestamp and GPS location in PostgreSQL, sends a high-priority alert to the admin team via the Notification Engine, and can trigger a Twilio voice call to emergency contacts.
+Insurance Link — Sahaya Shield
+Verified workers are marked insurance_eligible:true. When a worker files a claim, the Admin Dashboard receives it. Admin approves and the Payments Service transfers from the welfare pool account to the worker's UPI ID. The entire welfare pool is cooperative-owned — no insurer middleman.
+Tech
+Node.js, Supabase Storage, PostgreSQL, Twilio, Razorpay for welfare payouts.
+7. Federation Registry — Django
+What it does
+Stores all cooperative federation data — registered worker IDs, skill certifications, welfare eligibility, district records. It is the read-only source of truth for the entire platform.
+Who reads it
+Verification Service (worker registration), Admin Dashboard (federation management), IVR Service (confirming worker eligibility for temp allotment).
+Who writes to it
+Only cooperative federation admins via the Admin Dashboard. Nobody else — not workers, not consumers, not the backend automatically. A worker cannot add themselves to a federation they don't belong to. This is the entire basis of Sahaya's trust model.
+Why Django
+Will eventually connect to external government cooperative databases. Python has the best libraries for that integration. Django's ORM handles the complex relational queries cleanly.
+Tech
+Django, PostgreSQL, read-only access enforced at the service level.
+8. Notification Engine — Node.js + Twilio + FCM
+What it does
+A single unified service that decides how to reach any user based on what it knows about them. App user gets a push notification via FCM. IVR or non-app user gets an SMS via Twilio. Voice confirmation goes via a Twilio voice call. Every notification is logged in PostgreSQL with timestamp and delivery status.
+Why one engine
+The Booking Service does not need to know if a user has a smartphone. It fires one event — "booking confirmed for user X" — and the Notification Engine handles delivery. If you add WhatsApp tomorrow, you add it in one place, not in every service.
+FCM — Firebase Cloud Messaging
+Industry standard for push notifications on both Android and iOS. Delivers notifications even when the app is in the background or closed.
+Tech
+Node.js, FCM for push notifications, Twilio for SMS and voice calls, PostgreSQL notification log.
+9. Admin Dashboard — React
+What it does
+Web-based control panel for cooperative admins. Handles worker onboarding approval, dispute resolution, welfare payout processing, federation record management, analytics, and a complete audit trail. Every action in the system — booking created, worker suspended, payment processed, report resolved — is logged with timestamp, userId, and reason in PostgreSQL. Admins view the full audit trail here.
+Why React — Not Flutter
+Admin dashboard is a web application used on desktops by cooperative admins. React is the industry standard for data-heavy web dashboards. Flutter is optimised for mobile. Wrong tool for a desktop web use case.
+Tech
+React, Django REST API endpoints, PostgreSQL audit log table.
+BASEMENT — Where All Data Lives
+The basement stores everything permanently. Every Floor 1 service reads from and writes to here. Three storage systems, each handling a different type of data. None replaces the other.
+Storage 1 — PostgreSQL + PostGIS (Main Database)
+What is PostgreSQL?
+PostgreSQL is a relational database. Data lives in structured tables with defined relationships — bookings link to users, users link to skill profiles, payments link to bookings. Everything is connected through shared IDs. It speaks SQL — Structured Query Language.
+What is PostGIS?
+PostGIS is an extension on top of PostgreSQL that adds geographic data types and spatial functions. Instead of storing a worker's location as plain lat/lng numbers and doing distance calculations in application code, PostGIS stores coordinates as proper geometry types and runs spatial queries using an indexed data structure called an R-Tree.
+The R-Tree organises geographic space into nested bounding rectangles — all of India → Tamil Nadu → Chennai → Anna Nagar → individual worker coordinates. When the Geo-Matching Engine searches for workers within 5km, the database navigates this tree and skips entire regions that are obviously too far. It never checks workers outside the relevant area. This is why geo-matching is fast at scale.
+Key PostGIS functions in Sahaya
+ST_DWithin — finds all points within a radius using the spatial index. Used in every geo-matching query.
+ST_Distance — calculates real geographic distance between two geometry points.
+ST_GeomFromText — converts raw lat/lng coordinates into proper geometry type for storage.
+Why Not MongoDB or MySQL?
+MongoDB is eliminated because location is the core matching parameter of Sahaya, and PostGIS is the industry standard for geospatial data. MySQL has no spatial indexing at this level.
+Supabase Real-Time on PostgreSQL
+Supabase listens to PostgreSQL's internal change feed called the WAL — Write-Ahead Log. When any row changes — booking status updated, worker location updated, report resolved — Supabase pushes that change to all subscribed Flutter clients instantly. No polling. The Consumer App subscribes to their booking row. When the backend updates status to "confirmed," the consumer sees it in under a second.
+Key Tables in PostgreSQL
+Storage 2 — Supabase Storage (File Store)
+What is Supabase Storage?
+Supabase Storage is an S3-compatible file storage service. S3-compatible means it works exactly like Amazon S3 — the global industry standard for cloud file storage — but it is part of the Supabase ecosystem, so no additional platform needs to be configured.
+What it Stores
+Worker ID proof photos, report proof media (photos and videos), tax receipt PDFs, and donation receipts.
+How it Connects to PostgreSQL
+Supabase Storage stores the file and returns a URL. That URL is saved in the relevant PostgreSQL table. The reports table stores the proof_url. The worker_profiles table stores the id_proof_url. The payments_ledger stores the receipt_url. PostgreSQL holds the reference. Supabase Storage holds the file. They never overlap.
+Why Not Store Files in PostgreSQL Directly?
+Storing binary files — images, videos, PDFs — directly in a relational database bloats it enormously, slows every query, and makes backups massive. Files belong in object storage. References belong in databases. This is a fundamental architecture principle.
+Storage 3 — SQLite on Device (Offline Cache)
+What is SQLite?
+SQLite is a lightweight database that runs directly inside the Flutter app on the user's phone. No server, no network — just a database file on the device. Flutter accesses it via the sqflite package.
+What it Caches
+Booking history (last 30 bookings), worker profile, upcoming pre-allocated jobs from the AI Engine, the retry queue for failed API calls, and the active language JSON pack.
+Why Not In-Memory Storage?
+In-memory data disappears when the app closes. SQLite persists across app restarts and phone reboots. A queued availability update survives a restart and gets sent to the backend when the worker is back online. No data is ever lost.
+How All Three Storage Systems Connect
+COMPLETE TECH STACK — Every Technology
+PRESENTATION SCRIPTS — Final Reference
+Floor 3 (~20 seconds)
+Floor 2 (~30 seconds)
+Basement (~55 seconds)
+Floor 1 (~60 seconds)
+
+=== PPTX ===
+
+
+SMART INDIA HACKATHON 2026
+
+Problem Statement ID – SIH26089
+
+  Problem Statement Title - Cooperative Gig Services
+   Platform for Household & Community Services
+
+Theme - Agriculture ,FoodTech & Rural Development
+
+PS Category- Software
+
+Team ID- SIH26-A0H-T133
+
+Team Name - DARK PROTOCOL
+
+
+
+IDEA TITLE
+2
+Dark 
+Protocol
+
+
+Problem at Hand
+
+Invisible Workforce: Cooperative federations have verified electricians, plumbers, painters & caregivers — but 90%+ of India's workforce sits in the unorganised sector, invisible online.
+
+Commission Extraction: Urban Company charged workers up to 30% commission with zero insurance — nationwide protests hit Delhi, Bengaluru & Mumbai as recently as Feb 2026.
+
+No Digital Trust: Federations already vouch for worker skill & conduct, but that trust has no digital form — no verification, profiling, or accountability a customer can see.
+
+No Safety Net: Platform work sits outside ESIC/EPFO protection — Urban Company alone runs 52,000+ workers, a third women, with zero guaranteed insurance.
+
+Closing Window: India's gig workforce triples from 7.7M (2020-21) to 23.5M by 2029-30 — up to 60% of the workforce by 2030. Cooperatives risk losing members to commission-heavy platforms.
+Our Solution
+SAHAYA APP
+
+
+Consumer
+App
+
+Worker
+App
+
+Toll-Free
+IVR
+Why We Stand Out
+
+• IVR + App Reach: Only cooperative platform pairing an app with a toll-free IVR — reaches workers with no smartphone or data.
+• Zero Commission: Cooperative-owned, not privately held — no commission line to protest or roll back.
+• Sahaya Shield: Booking levy + donations fund a cooperative-owned welfare pool — no insurer middleman.
+• Federation-Verified Trust: Workers verified against real cooperative records, not self-reported profiles.
+• AI Forecasting for Workers: Predicts demand and pre-allocates work by zone — points the tech at worker income, not platform margin.
+• First of Its Kind: No app-only cooperative platform found pairs itself with account-free IVR booking.
+Key Features
+
+
+Consumer App
+●  Register / Login
+●  Booking & scheduling
+● Geolocation-based matching
+●  AI demand forecasting &   allocation
+●  Digital payments & invoicing
+●  Feedback & ratings
+● Booking history
+●  Admin dashboard
+●  Donation feature
+●  Emergency service requests
+●  Report a worker (with proof)
+●  Multilingual support
+
+
+
+Worker App
+●  Verified registration (co-op federation match)
+●  Skill profiling & certification●  Geolocation-based service matching
+●  AI demand forecasting & allocation
+●  Job request
+●  Digital payments & invoicing
+●  Admin dashboard
+●  Worker insurance
+●  Safety helpline
+●  Multilingual support
+
+Toll-Free IVR
+Temporary work allotment via voice call — no app, login, or account registration needed.
+@SIH Idea submission- Template
+
+TECHNICAL APPROACH
+3
+
+Dark 
+Protocol
+
+3
+
+@SIH Idea submission- Template
+
+
+FEASIBILITY AND VIABILITY
+4
+Dark 
+Protocol
+@SIH Idea submission- Template
+
+
+IMPACT AND BENEFITS
+5
+Dark 
+Protocol
+@SIH Idea submission- Template
+
+
+
+@SIH Idea submission- Template
+6
+
+RESEARCH  AND REFERENCES
+7
+@SIH Idea submission- Template
+
+Dark
+Protocol
+RESEARCH PAPERS
+1. Platform Cooperative Feasibility in the Gig Economy
+J. Coop. Org. & Mgmt, 2022
+↗
+2. Worker-Centric Peer Economy
+Microsoft Research
+↗
+3. Algorithmic Management of Labor Platforms
+MIS Quarterly, 2021
+↗
+4. Platform Worker-Member Participation Dilemmas
+New Tech, Work & Employment
+↗
+5. Prediction Algorithms in Matching Platforms
+Economic Theory, 2024
+↗
+SURVEY & STATISTICS
+3,418 members  /  4 cooperatives
+Platform-Cooperative Participation Study
+↗
+ILO – WESO 2021
+↗
+NITI Aayog – Gig Economy Report
+↗
+Oxford Academic – SER Study
+
+
+GOVT. DATASETS & RECORDS
+1. National Cooperative Database (NCD)
+Ministry of Cooperation – ~8.5 lakh cooperatives
+↗
+2. State/UT Cooperative Societies & Members
+data.gov.in – state-wise CSV dataset
+↗
+3. “Co-operative Societies” Dataset Group
+data.gov.in – PACS, Dairy, Multi-State & NCDC data
+↗
+4. e-Shram Portal Registrations
+Unorganised & gig worker data, state/district-wise
+↗
