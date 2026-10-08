@@ -50,7 +50,35 @@ The platform also focuses on verified cooperative workers rather than an open ma
 
 ### Architecture
 
-[Add the system architecture or workflow Mermaid diagram here.]
+flowchart TD
+    A[Customer] --> B[SAHAYA Application]
+    C[Worker] --> D[Worker Interface]
+    E[Voice / IVR User] --> F[IVR Service]
+
+    B --> G[Backend API]
+    D --> G
+    F --> G
+
+    G --> H[Authentication & User Management]
+    G --> I[Service Request Processing]
+
+    I --> J[Gemma 4 AI Engine]
+    J --> K[Structured Service Requirement]
+
+    K --> L[Worker Matching Engine]
+    L --> M[Location]
+    L --> N[Skills]
+    L --> O[Availability]
+    L --> P[Verification]
+
+    L --> Q[Recommended Workers]
+
+    G --> R[Database]
+    G --> S[Booking & Payment Services]
+
+    R --> T[Worker Profiles]
+    R --> U[Bookings]
+    R --> V[Service History]
 
 ### Technology Stack
 
