@@ -50,7 +50,28 @@ The platform also focuses on verified cooperative workers rather than an open ma
 
 ### Architecture
 
-![Uploading image.png…]()
+## Architecture
+
+```mermaid
+flowchart TD
+    A[Customer] --> B[SAHAYA App]
+    C[Worker] --> D[Worker Interface]
+    B --> E[Backend]
+    D --> E
+
+    E --> F[Gemma 4 AI]
+    F --> G[Service Request Understanding]
+
+    G --> H[AI Worker Matching]
+    H --> I[Geo Location]
+    H --> J[Worker Skills]
+    H --> K[Availability]
+    H --> L[Verification]
+
+    H --> M[Recommended Worker]
+
+    E --> N[Database]
+    E --> O[Booking System]
 
 ### Technology Stack
 
