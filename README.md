@@ -91,10 +91,10 @@ This separation makes the system easier to test, maintain, and extend.
 
 ### Team Contributions
 
-- **Nithin:** [Contribution]
-- **Pavna Preethikha M:** [Contribution]
-- **Nehasri Mullapudi:** [Contribution]
-- **Sattineni V S Tulasi Ram:** [Contribution]
+- **Nithin:** Backend development
+- **Pavna Preethikha M:** Dataset collection, cleaning, and preparation for the AI/ML components.
+- **Nehasri Mullapudi:**Frontend development
+- **Sattineni V S Tulasi Ram:** Gemma 4 integration & System architecture
 
 ## Working Application
 
@@ -114,86 +114,34 @@ The submitted application should be functional and accessible through the provid
 
 ### AI / Models
 
-- **[Model]:** [How it is used]
+Gemma 4 – Natural-language understanding and service-request processing
+Antigravity – AI-assisted development and implementation
+AI Matching Engine – Intelligent worker–customer matching
+Geo Mapping / Location Services – Location-based worker matching and proximity analysis
 
-### Open Source Components
-
-- **[Library / Framework]:** [Purpose]
-- **[Dataset]:** [Purpose]
-- **[API / Service]:** [Purpose]
-
-[Include relevant licenses, attribution, and acknowledgements for external components.]
-
-## Setup and Usage
-
-### Prerequisites
-
-- [Requirement]
-- [Requirement]
-
-### Installation
-
-```bash
-git clone [repository-url]
-cd [project-directory]
-[installation-command]
-```
-
-### Environment Variables
-
-```env
-[VARIABLE_NAME]=[value]
-```
-
-
-
-### Running the Project
-
-```bash
-[run-command]
-```
 
 ### Usage
 
-[Explain the basic steps required to use the project.]
+Start the application.
+Open the application in the browser.
+Create/login to a customer account.
+Enter a service requirement.
+Submit the request.
+Gemma 4 processes the request.
+Review the structured requirement.
+View the recommended workers.
+Select a suitable worker and proceed with the booking.
 
 ## Devpost Submission
 
 **Devpost Project:** [Devpost Project URL]
 
-[Add the link to the team's Devpost submission. Ensure the Devpost project page is complete and contains the required project information, links, media, and team details.]
+
 
 ## Credits and License
 
-### Credits
+SAHAYA uses open-source technologies and AI components including Gemma 4 and other libraries/frameworks used within the project.
 
-[Credit libraries, frameworks, datasets, models, APIs, contributors, and other external resources used.]
 
-### License
 
-[License name and/or link.]
-
-## Submission Checklist
-
-- [ ] Project title and description added
-- [ ] All team members listed
-- [ ] Problem clearly explained
-- [ ] Reason for choosing the problem explained
-- [ ] Solution and key features documented
-- [ ] Innovation and differentiation explained
-- [ ] Architecture included
-- [ ] Technical implementation documented
-- [ ] Work completed during the hackathon documented
-- [ ] Team contributions documented
-- [ ] Working application is functional
-- [ ] Live application link added where applicable
-- [ ] Demo video added
-- [ ] AI and open-source components documented
-- [ ] Setup and usage instructions tested
-- [ ] Challenges and learnings documented
-- [ ] Devpost submission completed
-- [ ] Devpost link added
-- [ ] Credits added
-- [ ] License added
-- [ ] Repository is organized and complete
 
