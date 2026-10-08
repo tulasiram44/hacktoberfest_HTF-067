@@ -48,14 +48,13 @@ The platform also focuses on verified cooperative workers rather than an open ma
 
 ## Technical Implementation
 
-### Architecture
-
 ## Architecture
 
 ```mermaid
 flowchart TD
     A[Customer] --> B[SAHAYA App]
     C[Worker] --> D[Worker Interface]
+
     B --> E[Backend]
     D --> E
 
@@ -63,6 +62,7 @@ flowchart TD
     F --> G[Service Request Understanding]
 
     G --> H[AI Worker Matching]
+
     H --> I[Geo Location]
     H --> J[Worker Skills]
     H --> K[Availability]
@@ -72,6 +72,16 @@ flowchart TD
 
     E --> N[Database]
     E --> O[Booking System]
+```
+
+### Technology Stack
+
+- **AI Model:** Gemma 4
+- **AI Matching:** Worker-customer matching based on skills, location, availability, and verification
+- **Backend:** [Add your actual backend technology]
+- **Frontend:** [Add your actual frontend technology]
+- **Database:** [Add your actual database]
+- **Location Services:** Geo-location / Maps
 
 ### Technology Stack
 
