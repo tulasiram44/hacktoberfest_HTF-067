@@ -78,8 +78,8 @@ flowchart TD
 
 - **AI Model:** Gemma 4
 - **AI Matching:** Worker-customer matching based on skills, location, availability, and verification
-- **Backend:** python
-- **Frontend:** python
+- **Backend:** flutter,node.js,python
+- **Frontend:** flutter,node.js,python
 - **Database:** CSV,PANDA,NumPy,Scikit-learn ,PostgreSQL + PostGIS
 - **Location Services:** Geo-location / Maps
 
