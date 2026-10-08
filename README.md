@@ -118,8 +118,6 @@ This separation makes the system easier to test, maintain, and extend.
 
 **Demo Video:** [[Video URL]](https://youtu.be/yAPccTv4L3A)
 
-[Provide a short demonstration of the working project, covering the main user flow and important functionality.]
-
 ## Open Source and AI Usage
 
 ### AI / Models
