@@ -117,6 +117,7 @@ This separation makes the system easier to test, maintain, and extend.
 ## Demo Video
 
 **Demo Video:** [[Video URL]](https://youtu.be/yAPccTv4L3A)
+## Prototype Video Link[https://youtu.be/yAPccTv4L3A]
 
 ## Open Source and AI Usage
 
